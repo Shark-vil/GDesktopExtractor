@@ -16,6 +16,7 @@ namespace GarrysmodDesktopAddonExtractor.Models
         /* Private */
         private ObservableCollection<AddonDataRowModel> _data;
         private string _version;
+        private bool _showGridLines;
 
         /* Public */
         public MainContext(string applicationVersion)
@@ -23,6 +24,10 @@ namespace GarrysmodDesktopAddonExtractor.Models
             _data = new ObservableCollection<AddonDataRowModel>();
             _data.CollectionChanged += AddonInfosCollectionChanged;
             _version = applicationVersion;
+
+#if DEBUG
+            _showGridLines = true;
+#endif
         }
 
         public ObservableCollection<AddonDataRowModel> Data
@@ -41,6 +46,16 @@ namespace GarrysmodDesktopAddonExtractor.Models
             set
             {
                 _version = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public bool ShowGridLines
+        {
+            get { return _showGridLines; }
+            set
+            {
+                _showGridLines = value;
                 NotifyPropertyChanged();
             }
         }

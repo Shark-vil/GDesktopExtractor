@@ -8,7 +8,7 @@
 	<Window.Styles>
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Default.xaml"/>
 	</Window.Styles>
-	<Grid ShowGridLines="True">
+	<Grid ShowGridLines="{Binding ShowGridLines}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="30"></RowDefinition>
 			<RowDefinition></RowDefinition>
@@ -16,9 +16,10 @@
 		</Grid.RowDefinitions>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition></ColumnDefinition>
+			<ColumnDefinition></ColumnDefinition>
 		</Grid.ColumnDefinitions>
 
-		<Grid Grid.Row="0">
+		<Grid Grid.Row="0"  Grid.Column="0">
 			<DockPanel>
 				<Menu DockPanel.Dock="Top">
 					<MenuItem x:Name="Menu_Scan" Header="Scan"/>
@@ -31,12 +32,19 @@
 						<Separator/>
 						<MenuItem x:Name="Menu_Exit" Header="Exit"/>
 					</MenuItem>
+				</Menu>
+			</DockPanel>
+		</Grid>
+
+		<Grid Grid.Row="0" Grid.Column="1">
+			<DockPanel HorizontalAlignment="Right">
+				<Menu DockPanel.Dock="Top">
 					<MenuItem Header="{Binding Version}"/>
 				</Menu>
 			</DockPanel>
 		</Grid>
 		
-		<Grid Grid.Row="1">
+		<Grid Grid.Row="1" Grid.ColumnSpan="2">
 			<DataGrid x:Name="DataGrid_Addons" 
 					  IsReadOnly="True"
 					  Items="{Binding Data}"
@@ -54,7 +62,7 @@
 			</DataGrid>
 		</Grid>
 
-		<Grid Grid.Row="2">
+		<Grid Grid.Row="2"  Grid.ColumnSpan="2">
 			<StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Orientation="Vertical">
 				<ProgressBar x:Name="ProgressBar_Bottom" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 				<TextBlock x:Name="ProgressBar_Text" Text="" HorizontalAlignment="Center" />
