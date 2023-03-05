@@ -1,25 +1,17 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using CSharpGmaReaderLibrary;
 using CSharpGmaReaderLibrary.Models;
 using GarrysmodDesktopAddonExtractor.Models;
 using GarrysmodDesktopAddonExtractor.Services;
-using Microsoft.Extensions.Logging;
 using NLog;
-using SkiaSharp;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 
 namespace GarrysmodDesktopAddonExtractor
 {
@@ -102,12 +94,10 @@ namespace GarrysmodDesktopAddonExtractor
 
                             var gmaExtractor = new GmaExtractor(specificExtractPath);
                             var gmaReader = new GmaReader();
+                            var options = new ReadFileContentOptions { AddonInfo = addonDataRow.AddonInfo };
 
-                            await gmaReader.ReadFileContentAsync(addonDataRow.AddonInfo.SourcePath, async (FileContentModel content) =>
-                            {
-                                await gmaExtractor.ExtractFileAsync(content);
-                                await gmaExtractor.MakeDescriptionFile(addonDataRow.AddonInfo);
-                            }, new ReadFileContentOptions { AddonInfo = addonDataRow.AddonInfo });
+                            await gmaReader.ReadFileContentAsync(addonDataRow.AddonInfo.SourcePath, async (FileContentModel content) => await gmaExtractor.ExtractFileAsync(content), options);
+                            await gmaExtractor.MakeDescriptionFile(addonDataRow.AddonInfo);
                         }
                         catch (Exception ex)
                         {
