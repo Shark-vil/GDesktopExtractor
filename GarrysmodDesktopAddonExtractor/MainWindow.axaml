@@ -31,6 +31,7 @@
 						<Separator/>
 						<MenuItem x:Name="Menu_Exit" Header="Exit"/>
 					</MenuItem>
+					<MenuItem Header="{Binding Version}"/>
 				</Menu>
 			</DockPanel>
 		</Grid>

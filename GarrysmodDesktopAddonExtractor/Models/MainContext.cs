@@ -15,12 +15,14 @@ namespace GarrysmodDesktopAddonExtractor.Models
     {
         /* Private */
         private ObservableCollection<AddonDataRowModel> _data;
+        private string _version;
 
         /* Public */
-        public MainContext()
+        public MainContext(string applicationVersion)
         {
             _data = new ObservableCollection<AddonDataRowModel>();
             _data.CollectionChanged += AddonInfosCollectionChanged;
+            _version = applicationVersion;
         }
 
         public ObservableCollection<AddonDataRowModel> Data
@@ -29,6 +31,16 @@ namespace GarrysmodDesktopAddonExtractor.Models
             set
             {
                 _data = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public string Version
+        {
+            get { return _version; }
+            set
+            {
+                _version = value;
                 NotifyPropertyChanged();
             }
         }

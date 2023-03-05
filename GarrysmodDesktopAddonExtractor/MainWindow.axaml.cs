@@ -17,7 +17,7 @@ namespace GarrysmodDesktopAddonExtractor
 {
     public partial class MainWindow : Window
     {
-        private MainContext _context = new MainContext();
+        private MainContext _context = new MainContext("Version - 1.0.1");
         private SettingsWindow? _settingsWindow = null;
         private List<Func<Task>>? _readAddonsTasks = null;
         private Logger _logger = LogManager.GetCurrentClassLogger();
