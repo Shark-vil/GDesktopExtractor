@@ -4,7 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" Width="700" Height="200" CanResize="False"
         x:Class="GarrysmodDesktopAddonExtractor.SettingsWindow"
-        Title="SettingsWindow" >
+        Title="Application Settings" >
 	<Grid ShowGridLines="True">
 		<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="670">
 			<DockPanel>
