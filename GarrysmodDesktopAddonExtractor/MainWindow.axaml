@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="GarrysmodDesktopAddonExtractor.MainWindow"
+        Title="GarrysmodDesktopAddonExtractor">
+	<Window.Styles>
+		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Default.xaml"/>
+	</Window.Styles>
+	<Grid ShowGridLines="True">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="30"></RowDefinition>
+			<RowDefinition></RowDefinition>
+			<RowDefinition Height="35"></RowDefinition>
+		</Grid.RowDefinitions>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition></ColumnDefinition>
+		</Grid.ColumnDefinitions>
+
+		<Grid Grid.Row="0">
+			<DockPanel>
+				<Menu DockPanel.Dock="Top">
+					<MenuItem x:Name="Menu_Scan" Header="Scan"/>
+					<MenuItem Header="Extract options">
+						<MenuItem x:Name="Menu_ExtractSelected" Header="Extract Selected"/>
+						<MenuItem x:Name="Menu_ExtractAll" Header="Exttract All"/>
+					</MenuItem>
+					<MenuItem Header="Application">
+						<MenuItem x:Name="Menu_Application_Settings" Header="Settings"/>
+						<Separator/>
+						<MenuItem x:Name="Menu_Exit" Header="Exit"/>
+					</MenuItem>
+				</Menu>
+			</DockPanel>
+		</Grid>
+		
+		<Grid Grid.Row="1">
+			<DataGrid x:Name="DataGrid_Addons" 
+					  IsReadOnly="True"
+					  Items="{Binding Data}"
+					  AutoGenerateColumns="false" 
+					  HorizontalAlignment="Stretch"
+					  VerticalAlignment="Stretch" 
+					  VerticalScrollBarVisibility="Auto"
+					  HorizontalScrollBarVisibility="Auto">
+				<DataGrid.Columns>
+					<DataGridTextColumn Header="Id" Binding="{Binding Path=Id}" />
+					<DataGridTextColumn Header="Addon Name"  Binding="{Binding Path=AddonName}" />
+					<DataGridTextColumn Header="Date" Binding="{Binding Path=AddonTimestamp}" />
+					<DataGridTextColumn Header="File Path" Binding="{Binding Path=SourcePath}"  />
+				</DataGrid.Columns>
+			</DataGrid>
+		</Grid>
+
+		<Grid Grid.Row="2">
+			<StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Orientation="Vertical">
+				<ProgressBar x:Name="ProgressBar_Bottom" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+				<TextBlock x:Name="ProgressBar_Text" Text="" HorizontalAlignment="Center" />
+			</StackPanel>
+		</Grid>
+	</Grid>
+</Window>

@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" Width="700" Height="200" CanResize="False"
+        x:Class="GarrysmodDesktopAddonExtractor.SettingsWindow"
+        Title="SettingsWindow" >
+	<Grid ShowGridLines="True">
+		<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="670">
+			<DockPanel>
+				<StackPanel Orientation="Vertical">
+					<TextBlock Background="#4a5869" Text="{Binding GarrysModAddonsFolderPath}" Height="25" Margin="0, 0, 10, 0" />
+					<Button x:Name="Button_SelectAddonsFolder" Content="Select addons folder" HorizontalContentAlignment="Center" Width="220" Margin="0, 5, 0, 0" />
+				</StackPanel>
+			</DockPanel>
+			<DockPanel Margin="0, 5, 0, 20">
+				<TextBlock Text="Example: SteamLibrary\steamapps\common\GarrysMod\garrysmod\addons" />
+			</DockPanel>
+			<DockPanel>
+				<StackPanel Orientation="Vertical">
+					<TextBlock Background="#4a5869" Text="{Binding GarrysModWorkshopFolderPath}" Height="25" Margin="0, 0, 10, 0" />
+					<Button x:Name="Button_SelectWorkshopFolder" Content="Select workshop 4000 folder" HorizontalContentAlignment="Center" Width="220" Margin="0, 5, 0, 0" />
+				</StackPanel>
+			</DockPanel>
+			<DockPanel Margin="0, 5, 0, 0">
+				<TextBlock Text="Example: SteamLibrary\steamapps\workshop\content\4000" />
+			</DockPanel>
+		</StackPanel>
+	</Grid>
+</Window>
