@@ -87,6 +87,15 @@ namespace GarrysmodDesktopAddonExtractor
                         continue;
 
                     var gmaReader = new GmaReader();
+                    var gmaHeaderReaderOptions = new ReadHeaderOptions
+                    {
+                        ReadCacheSingleTime = true,
+                        ReadFilesInfo = true,
+                    };
+                    var gmaExtractFileOptions = new ExtractFileOptions
+                    {
+                        RewriteExistsFiles = true,
+                    };
 
                     extractTasks.Add(async () =>
                     {
@@ -96,9 +105,9 @@ namespace GarrysmodDesktopAddonExtractor
                             string specificExtractPath = Path.Combine(extractFolderPath, GetValidFileName(folderName));
 
                             var gmaExtractor = new GmaExtractor(specificExtractPath);
-                            var options = new ReadFileContentOptions { AddonInfo = addonDataRow.AddonInfo };
+                            var options = new ReadFileContentOptions { AddonInfo = addonDataRow.AddonInfo, HeaderOptions = gmaHeaderReaderOptions };
 
-                            await gmaReader.ReadFileContentAsync(addonDataRow.AddonInfo.SourcePath, async (FileContentModel content) => await gmaExtractor.ExtractFileAsync(content), options);
+                            await gmaReader.ReadFileContentAsync(addonDataRow.AddonInfo.SourcePath, async (FileContentModel content) => await gmaExtractor.ExtractFileAsync(content, gmaExtractFileOptions), options);
                             await gmaExtractor.MakeDescriptionFile(addonDataRow.AddonInfo);
                         }
                         catch (Exception ex)
@@ -183,6 +192,11 @@ namespace GarrysmodDesktopAddonExtractor
 
                 int index = 0;
                 var gmaReader = new GmaReader();
+                var gmaHeaderReaderOptions = new ReadHeaderOptions
+                {
+                    ReadCacheSingleTime = true,
+                    ReadFilesInfo = true,
+                };
 
                 foreach (string filePath in addonsFilePaths)
                     _readAddonsTasks.Add(async () =>
@@ -191,7 +205,7 @@ namespace GarrysmodDesktopAddonExtractor
 
                         try
                         {;
-                            addonInfo = await gmaReader.ReadHeaderAsync(filePath);
+                            addonInfo = await gmaReader.ReadHeaderAsync(filePath, gmaHeaderReaderOptions);
                         }
                         catch (Exception ex)
                         {
