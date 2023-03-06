@@ -17,11 +17,12 @@ namespace GarrysmodDesktopAddonExtractor
 {
     public partial class MainWindow : Window
     {
-        private MainContext _context = new MainContext("Version - 1.0.1");
+        private MainContext _context = new MainContext("Version - 1.2.0");
         private SettingsWindow? _settingsWindow = null;
         private List<Func<Task>>? _readAddonsTasks = null;
         private Logger _logger = LogManager.GetCurrentClassLogger();
         private bool _canExtractAtThisMoment = false;
+        private bool _canProgress = false;
 
         public MainWindow()
         {
@@ -85,6 +86,8 @@ namespace GarrysmodDesktopAddonExtractor
                     if (string.IsNullOrEmpty(addonDataRow.AddonInfo.SourcePath))
                         continue;
 
+                    var gmaReader = new GmaReader();
+
                     extractTasks.Add(async () =>
                     {
                         try
@@ -93,7 +96,6 @@ namespace GarrysmodDesktopAddonExtractor
                             string specificExtractPath = Path.Combine(extractFolderPath, GetValidFileName(folderName));
 
                             var gmaExtractor = new GmaExtractor(specificExtractPath);
-                            var gmaReader = new GmaReader();
                             var options = new ReadFileContentOptions { AddonInfo = addonDataRow.AddonInfo };
 
                             await gmaReader.ReadFileContentAsync(addonDataRow.AddonInfo.SourcePath, async (FileContentModel content) => await gmaExtractor.ExtractFileAsync(content), options);
@@ -106,6 +108,9 @@ namespace GarrysmodDesktopAddonExtractor
                         finally
                         {
                             await CalculateProgressAsync();
+
+                            if (_canProgress == false)
+                                gmaReader.Dispose();
                         }
                     });
                 }
@@ -172,8 +177,12 @@ namespace GarrysmodDesktopAddonExtractor
                     ProgressBar_Bottom.Maximum = addonsFilePaths.Count;
                 });
 
+                await CalculateProgressTextAsync();
+
                 _readAddonsTasks = new List<Func<Task>>();
+
                 int index = 0;
+                var gmaReader = new GmaReader();
 
                 foreach (string filePath in addonsFilePaths)
                     _readAddonsTasks.Add(async () =>
@@ -181,23 +190,27 @@ namespace GarrysmodDesktopAddonExtractor
                         AddonInfoModel? addonInfo = null;
 
                         try
-                        {
-                            var gmaReader = new GmaReader();
+                        {;
                             addonInfo = await gmaReader.ReadHeaderAsync(filePath);
                         }
                         catch (Exception ex)
                         {
                             _logger.Error(ex);
                         }
-
-                        if (addonInfo != null)
+                        finally
                         {
-                            index++;
-                            addonInfo.Id = index;
-                            await Dispatcher.UIThread.InvokeAsync(() => _context.Data.Add(new AddonDataRowModel(addonInfo)));
-                        }
+                            if (addonInfo != null)
+                            {
+                                index++;
+                                addonInfo.Id = index;
+                                await Dispatcher.UIThread.InvokeAsync(() => _context.Data.Add(new AddonDataRowModel(addonInfo)));
+                            }
 
-                        await CalculateProgressAsync();
+                            await CalculateProgressAsync();
+
+                            if (_canProgress == false)
+                                gmaReader.Dispose();
+                        }
                     });
 
                 await Parallel.ForEachAsync(_readAddonsTasks, async (Func<Task> f, CancellationToken c) =>
@@ -217,15 +230,30 @@ namespace GarrysmodDesktopAddonExtractor
                 if (ProgressBar_Bottom.Value + 1 == ProgressBar_Bottom.Maximum)
                 {
                     ProgressBar_Bottom.Value = 0;
-                    ProgressBar_Text.Text = string.Empty;
                     _canExtractAtThisMoment = false;
+                    _canProgress = false;
                 }
                 else
                 {
                     ProgressBar_Bottom.Value += 1;
+                    _canProgress = true;
+                }
+            });
 
+            await CalculateProgressTextAsync();
+        }
+
+        private async Task CalculateProgressTextAsync()
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (!_canProgress)
+                    ProgressBar_Text.Text = string.Empty;
+                else
+                {
                     double value = ProgressBar_Bottom.Value / ProgressBar_Bottom.Maximum;
                     int percent = (int)(value * 100);
+
                     ProgressBar_Text.Text = $"{percent} % / 100 %";
                 }
             });
