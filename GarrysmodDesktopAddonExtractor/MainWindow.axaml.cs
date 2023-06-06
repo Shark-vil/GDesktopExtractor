@@ -5,11 +5,14 @@ using CSharpGmaReaderLibrary.Models;
 using GarrysmodDesktopAddonExtractor.Models;
 using GarrysmodDesktopAddonExtractor.Services;
 using NLog;
+using SkiaSharp;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,7 +20,7 @@ namespace GarrysmodDesktopAddonExtractor
 {
     public partial class MainWindow : Window
     {
-        private MainContext _context = new MainContext("Version - 1.2.0");
+        private MainContext _context = new MainContext("Version - 1.3.0");
         private SettingsWindow? _settingsWindow = null;
         private List<Func<Task>>? _readAddonsTasks = null;
         private Logger _logger = LogManager.GetCurrentClassLogger();
@@ -35,13 +38,62 @@ namespace GarrysmodDesktopAddonExtractor
             Menu_ExtractSelected.Click += OnClickExtractSelected;
             Menu_ExtractAll.Click += OnClickExtractAll;
             Menu_Exit.Click += OnClickCloseWindow;
+			//Menu_TextBox_Search.TextInput += OnSearchTextInput;
+			Menu_TextBox_Search.KeyUp += OnSearchKeyUp;
+			Menu_TextBox_Search.KeyDown += OnSearchKeyDown;
 
 #if !DEBUG
             OnScanAddons();
 #endif
-        }
+		}
 
-        private void OnClickExtractAll(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+		private void OnSearchKeyDown(object? sender, Avalonia.Input.KeyEventArgs e) => OnSearchByText();
+
+		private void OnSearchKeyUp(object? sender, Avalonia.Input.KeyEventArgs e) => OnSearchByText();
+
+		private void OnSearchTextInput(object? sender, Avalonia.Input.TextInputEventArgs e) => OnSearchByText();
+
+
+		private void OnSearchByText()
+        {
+            if (_context.DataAll == null) return;
+
+			string? searchText = _context.SearchText;
+
+			if (string.IsNullOrWhiteSpace(searchText))
+			{
+				_context.Data = _context.DataAll;
+				return;
+			}
+
+			searchText = searchText.Trim().ToLower();
+			searchText = Regex.Replace(searchText, @"\s+", string.Empty);
+
+			if (string.IsNullOrWhiteSpace(searchText))
+			{
+				_context.Data = _context.DataAll;
+				return;
+			}
+			else
+			{
+				_context.DataSearch = new ObservableCollection<AddonDataRowModel>();
+				for (int i = _context.DataAll.Count - 1; i > 0; i--)
+				{
+					AddonDataRowModel rowEntry = _context.DataAll[i];
+                    if (rowEntry.AddonName != null)
+                    {
+                        string addonName = rowEntry.AddonName.Trim().ToLower();
+						addonName = Regex.Replace(addonName, @"\s+", string.Empty);
+
+                        if (addonName.Contains(searchText) || addonName.IndexOf(searchText) > 0)
+						    _context.DataSearch.Add(rowEntry);
+                    }
+				}
+				_context.Data = _context.DataSearch;
+			}
+		}
+
+		private void OnClickExtractAll(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             DataGrid_Addons.SelectAll();
             OnStartExtractSelected();
@@ -97,18 +149,44 @@ namespace GarrysmodDesktopAddonExtractor
                         RewriteExistsFiles = true,
                     };
 
+                    DateTime extractInfoPrintDelay = DateTime.Now;
+
                     extractTasks.Add(async () =>
                     {
                         try
                         {
                             string folderName = addonDataRow.AddonInfo.Name ?? Guid.NewGuid().ToString("N");
                             string specificExtractPath = Path.Combine(extractFolderPath, GetValidFileName(folderName));
+                            string? directoryPath = Path.GetDirectoryName(specificExtractPath);
+                            if (directoryPath != null)
+                            {
+                                string directoryName = Path.GetFileName(specificExtractPath);
+								directoryName = directoryName.Trim();
+								directoryName = directoryName.ToLower();
+								directoryName = Regex.Replace(directoryName, @"\s+", " ");
+                                directoryName = directoryName.Replace(" ", "_");
 
-                            var gmaExtractor = new GmaExtractor(specificExtractPath);
+								if (addonDataRow.AddonId != null)
+									directoryName = directoryName + "_" + addonDataRow.AddonId.ToString();
+
+                                specificExtractPath = Path.Combine(directoryPath, directoryName);
+							}
+
+							await Dispatcher.UIThread.InvokeAsync(() => ProgressBar_Text.Text = "Extract: " + addonDataRow.AddonInfo.Name);
+
+							var gmaExtractor = new GmaExtractor(specificExtractPath);
                             var options = new ReadFileContentOptions { AddonInfo = addonDataRow.AddonInfo, HeaderOptions = gmaHeaderReaderOptions };
 
-                            await gmaReader.ReadFileContentAsync(addonDataRow.AddonInfo.SourcePath, async (FileContentModel content) => await gmaExtractor.ExtractFileAsync(content, gmaExtractFileOptions), options);
-                            await gmaExtractor.MakeDescriptionFile(addonDataRow.AddonInfo);
+                            await gmaReader.ReadFileContentAsync(addonDataRow.AddonInfo.SourcePath, async (FileContentModel content) =>
+                            {
+                                await gmaExtractor.ExtractFileAsync(content, gmaExtractFileOptions);
+                                if (extractInfoPrintDelay < DateTime.Now)
+                                {
+                                    extractInfoPrintDelay = DateTime.Now.AddSeconds(.5);
+									await Dispatcher.UIThread.InvokeAsync(() => ProgressBar_Text.Text = "Extract: " + addonDataRow.AddonInfo.Name + " - " + content.FilePath);
+                                }
+                            }, options);
+                            //await gmaExtractor.MakeDescriptionFile(addonDataRow.AddonInfo);
                         }
                         catch (Exception ex)
                         {
@@ -145,80 +223,179 @@ namespace GarrysmodDesktopAddonExtractor
 
         private void OnScanAddons()
         {
-            _context.Data = new ObservableCollection<AddonDataRowModel>();
+            _context.DataAll = new ObservableCollection<AddonDataRowModel>();
+            _context.Data.Clear();
 
-            Task.Factory.StartNew(async () =>
+			Task.Factory.StartNew(async () =>
             {
                 SettingsInfo settingsInfo = await SettingsService.GetSettingsAsync();
-                List<string> addonsFilePaths = new List<string>();
+				var addonsFilePathsAll = new List<AddonPathModel>();
+				var addonsFilePathsAddons = new List<AddonPathModel>();
+				var addonsFilePathsWorkshopEntries = new List<AddonPathModel>();
 
-                if (Directory.Exists(settingsInfo.GarrysModAddonsFolderPath))
-                    addonsFilePaths = Directory
-                        .GetFiles(settingsInfo.GarrysModAddonsFolderPath, "*.*", SearchOption.TopDirectoryOnly)
-                        .Where(s => s.EndsWith(".gma") || s.EndsWith(".bin"))
-                        .ToList();
-
-                if (Directory.Exists(settingsInfo.GarrysModWorkshopFolderPath))
+				if (Directory.Exists(settingsInfo.GarrysModWorkshopFolderPath))
                 {
-                    string[] workshopSubDirectoryPaths = Directory
+					string[] workshopSubDirectoryPaths = Directory
                         .GetDirectories(settingsInfo.GarrysModWorkshopFolderPath, "*.*", SearchOption.TopDirectoryOnly);
 
                     if (workshopSubDirectoryPaths.Length > 0)
                     {
-                        foreach (string subDirectoryPath in workshopSubDirectoryPaths)
+						foreach (string subDirectoryPath in workshopSubDirectoryPaths)
                         {
-                            List<string> subDirectoryFilesPaths = Directory
+                            List<string> addonsFilePaths = Directory
                                 .GetFiles(subDirectoryPath, "*.*", SearchOption.TopDirectoryOnly)
                                 .Where(s => s.EndsWith(".gma") || s.EndsWith(".bin"))
                                 .ToList();
 
-                            if (subDirectoryFilesPaths.Count > 0)
-                                addonsFilePaths.AddRange(subDirectoryFilesPaths);
-                        }
+							foreach (string filePath in addonsFilePaths)
+								addonsFilePathsWorkshopEntries.Add(new AddonPathModel
+								{
+									AddonId = Path.GetFileName(Path.GetDirectoryName(filePath)),
+									FilePath = filePath,
+									IsWorkshop = true,
+								});
+						}
                     }
                 }
 
-                if (addonsFilePaths.Count == 0) return;
+				if (Directory.Exists(settingsInfo.GarrysModAddonsFolderPath))
+                {
+					List<string> addonsFilePaths = Directory
+						.GetFiles(settingsInfo.GarrysModAddonsFolderPath, "*.*", SearchOption.TopDirectoryOnly)
+						.Where(s => s.EndsWith(".gma"))
+						.ToList();
 
-                await Dispatcher.UIThread.InvokeAsync(() =>
+					foreach (string filePath in addonsFilePaths)
+                    {
+                        string[] filePathParts = Path.GetFileNameWithoutExtension(filePath).Split("_");
+                        string addonId = filePathParts.Length > 0 ? filePathParts[filePathParts.Length - 1] : string.Empty;
+                        DateTime lastEditTime = File.GetLastWriteTime(filePath);
+
+                        for (int i = addonsFilePathsWorkshopEntries.Count - 1; i >= 0; i--)
+                        {
+							AddonPathModel workshopFilePathEntry = addonsFilePathsWorkshopEntries[i];
+                            if (workshopFilePathEntry.AddonId != addonId)
+                                continue;
+
+                            string workshopFilePath = workshopFilePathEntry.FilePath;
+							//if (File.GetLastWriteTime(workshopFilePath) <= lastEditTime && Path.GetExtension(workshopFilePath) == ".bin")
+							if (File.GetLastWriteTime(workshopFilePath) <= lastEditTime)
+							{
+								addonsFilePathsAddons.Add(new AddonPathModel
+                                {
+                                    AddonId = addonId,
+                                    FilePath = filePath,
+                                    IsWorkshop = false,
+                                });
+
+								addonsFilePathsWorkshopEntries.RemoveAt(i);
+							}
+						}
+					}
+				}
+
+                addonsFilePathsAll.AddRange(addonsFilePathsWorkshopEntries);
+				addonsFilePathsAll.AddRange(addonsFilePathsAddons);
+
+				await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     ProgressBar_Bottom.Minimum = 0;
-                    ProgressBar_Bottom.Maximum = addonsFilePaths.Count;
+                    ProgressBar_Bottom.Maximum = addonsFilePathsAll.Count;
                 });
 
                 await CalculateProgressTextAsync();
 
                 _readAddonsTasks = new List<Func<Task>>();
 
-                int index = 0;
+                var skipHashes = new List<string>();
                 var gmaReader = new GmaReader();
                 var gmaHeaderReaderOptions = new ReadHeaderOptions
                 {
+                    UseCache = true,
                     ReadCacheSingleTime = true,
                     ReadFilesInfo = true,
                 };
 
-                foreach (string filePath in addonsFilePaths)
+                /*
+				foreach (AddonPathModel addonPath in addonsFilePathsAll)
+                {
+					AddonInfoModel? addonInfo = null;
+
+					try
+					{
+						addonInfo = await gmaReader.ReadHeaderAsync(addonPath.FilePath, gmaHeaderReaderOptions);
+                        if (addonInfo != null)
+                            _logger.Info("Reading addon: {0} - {1}", addonInfo.Name ?? "None", addonInfo.SourcePath ?? "None");
+					}
+					catch (Exception ex)
+					{
+						_logger.Error(ex);
+#if DEBUG
+                        Console.WriteLine(string.Format("ERROR:\n{0}", ex));
+#endif
+                    }
+					finally
+					{
+						if (addonInfo != null)
+						{
+							if (addonInfo.AddonFileHash != null)
+								await Dispatcher.UIThread.InvokeAsync(() => _context.Data.Add(new AddonDataRowModel(addonInfo)));
+							else
+								await Dispatcher.UIThread.InvokeAsync(() => ProgressBar_Bottom.Maximum--);
+						
+							//if (addonInfo.AddonFileHash != null && !skipHashes.Exists(x => x == addonInfo.AddonFileHash))
+							//{
+							//	skipHashes.Add(addonInfo.AddonFileHash);
+							//	await Dispatcher.UIThread.InvokeAsync(() => _context.Data.Add(new AddonDataRowModel(addonInfo)));
+							//}
+							//else
+							//{
+							//	await Dispatcher.UIThread.InvokeAsync(() => ProgressBar_Bottom.Maximum--);
+							//}
+						}
+
+						await CalculateProgressAsync();
+					}
+				}
+
+				gmaReader.Dispose();
+				_canProgress = false;
+                */
+
+                foreach (AddonPathModel addonPath in addonsFilePathsAll)
                     _readAddonsTasks.Add(async () =>
                     {
                         AddonInfoModel? addonInfo = null;
 
                         try
-                        {;
-                            addonInfo = await gmaReader.ReadHeaderAsync(filePath, gmaHeaderReaderOptions);
-                        }
+                        {
+                            addonInfo = await gmaReader.ReadHeaderAsync(addonPath.FilePath, gmaHeaderReaderOptions);
+                            if (addonInfo != null && long.TryParse(addonPath.AddonId, out long addonId))
+                                addonInfo.AddonId = addonId;
+						}
                         catch (Exception ex)
                         {
                             _logger.Error(ex);
-                        }
-                        finally
+#if DEBUG
+							Console.WriteLine(string.Format("ERROR:\n{0}", ex));
+#endif
+						}
+						finally
                         {
                             if (addonInfo != null)
                             {
-                                index++;
-                                addonInfo.Id = index;
-                                await Dispatcher.UIThread.InvokeAsync(() => _context.Data.Add(new AddonDataRowModel(addonInfo)));
-                            }
+								//if (addonInfo.AddonFileHash != null && !skipHashes.Exists(x => x == addonInfo.AddonFileHash))
+								//{
+								//    skipHashes.Add(addonInfo.AddonFileHash);
+								//    await Dispatcher.UIThread.InvokeAsync(() => _context.Data.Add(new AddonDataRowModel(addonInfo)));
+								//}
+								//else
+								//{
+								//    await Dispatcher.UIThread.InvokeAsync(() => ProgressBar_Bottom.Maximum--);
+								//}
+
+								await Dispatcher.UIThread.InvokeAsync(() => _context.DataAll.Add(new AddonDataRowModel(addonInfo)));
+							}
 
                             await CalculateProgressAsync();
 
@@ -227,14 +404,21 @@ namespace GarrysmodDesktopAddonExtractor
                         }
                     });
 
-                await Parallel.ForEachAsync(_readAddonsTasks, async (Func<Task> f, CancellationToken c) =>
+				//var parallelOptions = new ParallelOptions()
+				//{
+				//	MaxDegreeOfParallelism = 6
+				//};
+
+				await Parallel.ForEachAsync(_readAddonsTasks, async (Func<Task> f, CancellationToken c) =>
                 {
                     if (!c.IsCancellationRequested)
                         await f.Invoke();
                     else
                         await CalculateProgressAsync();
                 });
-            });
+
+                _context.Data = _context.DataAll;
+			});
         }
 
         private async Task CalculateProgressAsync()

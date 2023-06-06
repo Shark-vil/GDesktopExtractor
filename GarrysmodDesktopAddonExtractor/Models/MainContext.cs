@@ -15,8 +15,11 @@ namespace GarrysmodDesktopAddonExtractor.Models
     {
         /* Private */
         private ObservableCollection<AddonDataRowModel> _data;
-        private string _version;
-        private bool _showGridLines;
+		private ObservableCollection<AddonDataRowModel> _dataAll;
+		private ObservableCollection<AddonDataRowModel> _dataSearch;
+		private string _version;
+        private string? _searchText;
+		private bool _showGridLines;
 
         /* Public */
         public MainContext(string applicationVersion)
@@ -40,7 +43,27 @@ namespace GarrysmodDesktopAddonExtractor.Models
             }
         }
 
-        public string Version
+		public ObservableCollection<AddonDataRowModel> DataSearch
+		{
+			get { return _dataSearch; }
+			set
+			{
+				_dataSearch = value;
+				NotifyPropertyChanged();
+			}
+		}
+
+		public ObservableCollection<AddonDataRowModel> DataAll
+		{
+			get { return _dataAll; }
+			set
+			{
+				_dataAll = value;
+				NotifyPropertyChanged();
+			}
+		}
+
+		public string Version
         {
             get { return _version; }
             set
@@ -50,7 +73,17 @@ namespace GarrysmodDesktopAddonExtractor.Models
             }
         }
 
-        public bool ShowGridLines
+		public string? SearchText
+		{
+            get { return _searchText; }
+			set
+			{
+				_searchText = value;
+				NotifyPropertyChanged();
+			}
+		}
+
+		public bool ShowGridLines
         {
             get { return _showGridLines; }
             set

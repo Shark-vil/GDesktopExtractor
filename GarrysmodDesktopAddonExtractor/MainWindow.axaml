@@ -10,6 +10,7 @@
 	</Window.Styles>
 	<Grid ShowGridLines="{Binding ShowGridLines}">
 		<Grid.RowDefinitions>
+			<RowDefinition Height="10"></RowDefinition>
 			<RowDefinition Height="30"></RowDefinition>
 			<RowDefinition></RowDefinition>
 			<RowDefinition Height="35"></RowDefinition>
@@ -18,8 +19,12 @@
 			<ColumnDefinition></ColumnDefinition>
 			<ColumnDefinition></ColumnDefinition>
 		</Grid.ColumnDefinitions>
+		
+		<Grid Grid.Row="0"  Grid.ColumnSpan="2">
+			<Panel Background="Gray"/>
+		</Grid>
 
-		<Grid Grid.Row="0"  Grid.Column="0">
+		<Grid Grid.Row="1"  Grid.Column="0" Margin="0, 5, 0, 0">
 			<DockPanel>
 				<Menu DockPanel.Dock="Top">
 					<MenuItem x:Name="Menu_Scan" Header="Scan"/>
@@ -27,24 +32,27 @@
 						<MenuItem x:Name="Menu_ExtractSelected" Header="Extract Selected"/>
 						<MenuItem x:Name="Menu_ExtractAll" Header="Exttract All"/>
 					</MenuItem>
-					<MenuItem Header="Application">
+					<MenuItem Header="Application" >
 						<MenuItem x:Name="Menu_Application_Settings" Header="Settings"/>
 						<Separator/>
 						<MenuItem x:Name="Menu_Exit" Header="Exit"/>
 					</MenuItem>
+					<Border>
+						<TextBox x:Name="Menu_TextBox_Search" Text="{Binding SearchText}" ToolTip.Tip="Enter text to search for an addon by name" Background="WhiteSmoke" Foreground="Black" Width="200" />
+					</Border>
 				</Menu>
 			</DockPanel>
 		</Grid>
 
-		<Grid Grid.Row="0" Grid.Column="1">
+		<Grid Grid.Row="1" Grid.Column="1">
 			<DockPanel HorizontalAlignment="Right">
 				<Menu DockPanel.Dock="Top">
-					<MenuItem Header="{Binding Version}"/>
+					<MenuItem Header="{Binding Version}" VerticalAlignment="Center"/>
 				</Menu>
 			</DockPanel>
 		</Grid>
 		
-		<Grid Grid.Row="1" Grid.ColumnSpan="2">
+		<Grid Grid.Row="2" Grid.ColumnSpan="2">
 			<DataGrid x:Name="DataGrid_Addons" 
 					  IsReadOnly="True"
 					  Items="{Binding Data}"
@@ -54,7 +62,7 @@
 					  VerticalScrollBarVisibility="Auto"
 					  HorizontalScrollBarVisibility="Auto">
 				<DataGrid.Columns>
-					<DataGridTextColumn Header="Id" Binding="{Binding Path=Id}" />
+					<DataGridTextColumn Header="Id" Binding="{Binding Path=AddonId}" />
 					<DataGridTextColumn Header="Addon Name"  Binding="{Binding Path=AddonName}" />
 					<DataGridTextColumn Header="Date" Binding="{Binding Path=AddonTimestamp}" />
 					<DataGridTextColumn Header="File Path" Binding="{Binding Path=SourcePath}"  />
@@ -62,7 +70,7 @@
 			</DataGrid>
 		</Grid>
 
-		<Grid Grid.Row="2"  Grid.ColumnSpan="2">
+		<Grid Grid.Row="3"  Grid.ColumnSpan="2">
 			<StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Orientation="Vertical">
 				<ProgressBar x:Name="ProgressBar_Bottom" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 				<TextBlock x:Name="ProgressBar_Text" Text="" HorizontalAlignment="Center" />

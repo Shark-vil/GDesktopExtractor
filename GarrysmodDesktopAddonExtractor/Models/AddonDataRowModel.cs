@@ -8,13 +8,13 @@ namespace GarrysmodDesktopAddonExtractor.Models
         public AddonInfoModel AddonInfo;
         public bool RowVisible;
 
-        public int Id
-        {
-            get { return AddonInfo.Id; }
-            set { AddonInfo.Id = value; }
-        }
+		public long? AddonId
+		{
+			get { return AddonInfo.AddonId; }
+			set { AddonInfo.AddonId = value; }
+		}
 
-        public string? AddonName
+		public string? AddonName
         {
             get { return AddonInfo.Name; }
             set { AddonInfo.Name = value; }
